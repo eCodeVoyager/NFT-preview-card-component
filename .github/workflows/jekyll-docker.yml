@@ -1,4 +1,4 @@
-name: Jekyll site CI
+name: Jekyll site CI with Tailwind CSS
 
 on:
   push:
@@ -7,14 +7,33 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build: ["npm run build"]
-
+  build:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Build the site in the jekyll/builder container
-      run: |
-        docker run \
-        -v ${{ github.workspace }}:/srv/jekyll -v ${{ github.workspace }}/_site:/srv/jekyll/_site \
-        jekyll/builder:latest /bin/bash -c "chmod -R 777 /srv/jekyll && jekyll build --future"
+      - uses: actions/checkout@v3
+
+      - name: Setup Ruby and Node.js
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1'
+          bundler-cache: true
+          node-version: '16'  # Specify the desired Node.js version for Tailwind
+
+      - name: Install dependencies
+        run: |
+          gem install bundler jekyll  # Install Jekyll and Bundler
+          npm install -g postcss tailwindcss  # Install Tailwind CSS and PostCSS
+          bundle install
+          npm install  # Install other Node.js dependencies if needed
+
+      - name: Build the site with Tailwind CSS generation
+        run: |
+          npx tailwindcss -i ./assets/css/input.css -o ./assets/css/output.css  # Adjust paths as needed
+          bundle exec jekyll build --future
+
+      - name: Deploy (optional)
+        uses: peaceiris/actions-gh-pages@v3  # Example for GitHub Pages deployment
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
